@@ -1,0 +1,41 @@
+{
+  "name": "focus-study",
+  "version": "1.0.0",
+  "description": "Distraction-blocking focus app — web or Chromium desktop (Electron)",
+  "type": "module",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "web": "python3 -m http.server 8080",
+    "dist": "electron-builder"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.0"
+  },
+  "build": {
+    "appId": "com.focusstudy.app",
+    "productName": "Focus Study",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "index.html",
+      "css/**/*",
+      "js/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["portable"]
+    },
+    "linux": {
+      "target": ["AppImage"]
+    }
+  }
+}

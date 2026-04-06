@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src 'self' data: https: blob:; frame-src 'self' https: http: about:; webview-src http: https: about: data:; connect-src 'self' https:; base-uri 'self'; form-action 'self';">
+  <title>Focus Study</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app" class="app hidden">
+    <header class="topbar" role="banner">
+      <div class="topbar-left">
+        <span class="logo">Focus</span>
+        <span id="runtimeBadge" class="runtime-badge hidden mono" aria-hidden="true"></span>
+        <span id="sessionClock" class="session-clock mono" aria-live="polite">00:00</span>
+      </div>
+      <nav class="topbar-nav" aria-label="Panels">
+        <button type="button" class="tab-btn active" data-panel="browser" accesskey="b" title="Alt+B">Browser</button>
+        <button type="button" class="tab-btn" data-panel="tasks" accesskey="t" title="Alt+T">Tasks</button>
+        <button type="button" class="tab-btn" data-panel="timer" accesskey="p" title="Alt+P">Timer</button>
+        <button type="button" class="tab-btn" data-panel="settings" accesskey="s" title="Alt+S">Settings</button>
+      </nav>
+      <div class="topbar-right">
+        <span id="blockedBadge" class="badge mono" title="Blocked attempts this session">0 blocked</span>
+        <button type="button" id="btnExitFocus" class="btn btn-danger">Exit focus</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section id="panel-browser" class="panel active" aria-labelledby="browser-heading">
+        <h2 id="browser-heading" class="sr-only">Minimal browser</h2>
+        <div class="browser-toolbar">
+          <label class="sr-only" for="urlInput">URL</label>
+          <input type="text" id="urlInput" class="url-input mono" placeholder="https://example.com" autocomplete="off" spellcheck="false" maxlength="2048" />
+          <div class="browser-actions">
+            <button type="button" id="btnGo" class="btn btn-primary">Go</button>
+            <button type="button" id="btnBack" class="btn">Back</button>
+          </div>
+          <label class="toggle"><input type="checkbox" id="whitelistMode" /> Whitelist only</label>
+        </div>
+        <p id="browserHint" class="browser-hint small muted"></p>
+        <div id="iframeWrap" class="iframe-wrap">
+          <iframe id="siteFrame" class="browser-surface" title="Approved content" sandbox="allow-scripts allow-same-origin allow-forms allow-downloads" referrerpolicy="no-referrer"></iframe>
+          <webview
+            id="siteWebview"
+            class="browser-surface hidden"
+            partition="persist:focus-browser"
+            allowpopups="false"
+          ></webview>
+          <div id="iframeBlockOverlay" class="iframe-block hidden" role="alert">
+            <p class="block-title">Navigation blocked</p>
+            <p id="blockReason" class="mono small"></p>
+          </div>
+        </div>
+      </section>
+
+      <section id="panel-tasks" class="panel" hidden>
+        <h2 class="panel-title">Tasks</h2>
+        <form id="taskForm" class="task-form">
+          <input type="text" id="taskInput" maxlength="500" placeholder="New task" autocomplete="off" />
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+        <ul id="taskList" class="task-list"></ul>
+      </section>
+
+      <section id="panel-timer" class="panel" hidden>
+        <h2 class="panel-title">Pomodoro</h2>
+        <div class="pomodoro-display mono" id="pomodoroDisplay">25:00</div>
+        <div class="pomodoro-controls">
+          <button type="button" id="btnPomStart" class="btn btn-primary">Start</button>
+          <button type="button" id="btnPomPause" class="btn">Pause</button>
+          <button type="button" id="btnPomReset" class="btn">Reset</button>
+        </div>
+        <div class="pomodoro-settings">
+          <label class="field-inline">Work (min) <input type="number" id="setWork" min="1" max="120" value="25" /></label>
+          <label class="field-inline">Short break <input type="number" id="setShort" min="1" max="60" value="5" /></label>
+          <label class="field-inline">Long break <input type="number" id="setLong" min="1" max="60" value="15" /></label>
+        </div>
+        <p class="small muted">Intervals save when changed.</p>
+      </section>
+
+      <section id="panel-settings" class="panel" hidden>
+        <h2 class="panel-title">Settings</h2>
+        <fieldset class="fieldset">
+          <legend>Exit focus</legend>
+          <div class="field-row">
+            <label class="radio-label"><input type="radio" name="exitMode" value="delay" /> Delay (seconds)</label>
+            <label class="radio-label"><input type="radio" name="exitMode" value="password" /> Password</label>
+          </div>
+          <div class="field-row">
+            <label class="field-inline">Seconds <input type="number" id="exitDelay" min="5" max="600" value="30" /></label>
+          </div>
+          <label class="sr-only" for="exitPassword">Set exit password</label>
+          <input type="password" id="exitPassword" maxlength="128" placeholder="Set exit password" autocomplete="new-password" class="input-block" />
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend>Strict mode</legend>
+          <label class="check-label"><input type="checkbox" id="strictMode" /> Only allow 1–3 domains (below)</label>
+          <textarea id="strictDomains" rows="3" maxlength="2000" placeholder="One domain per line, e.g. docs.google.com"></textarea>
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend>Blocked hosts</legend>
+          <textarea id="blockedList" rows="6" maxlength="8000" placeholder="example.com"></textarea>
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend>Allowed hosts (whitelist)</legend>
+          <textarea id="allowedList" rows="4" maxlength="8000"></textarea>
+        </fieldset>
+        <button type="button" id="btnSaveSettings" class="btn btn-primary save-btn">Save settings</button>
+        <p class="small muted">Stats: <span id="statsSummary"></span></p>
+        <div id="smartSuggestions" class="suggestions"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="focusGate" class="focus-gate">
+    <div class="focus-gate-card">
+      <p class="gate-kicker mono">Deep work</p>
+      <h1 class="gate-title">Focus Study</h1>
+      <p class="gate-sub muted">A minimal space for concentration. Chromium engine in the desktop app.</p>
+      <button type="button" id="btnEnterFocus" class="btn btn-primary btn-large">Enter focus mode</button>
+      <p class="gate-hint small muted"><kbd>Enter</kbd> or <kbd>Space</kbd></p>
+    </div>
+  </div>
+
+  <div id="exitModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exitTitle">
+    <div class="modal-backdrop" id="exitBackdrop"></div>
+    <div class="modal-box">
+      <h2 id="exitTitle" class="modal-title">Exit focus mode</h2>
+      <div id="exitDelayPanel" hidden>
+        <p class="modal-body">Wait <span id="exitCountdown" class="mono">30</span> seconds</p>
+        <button type="button" id="btnCancelExit" class="btn">Cancel</button>
+      </div>
+      <div id="exitPasswordPanel" hidden>
+        <label for="exitPasswordInput">Password</label>
+        <input type="password" id="exitPasswordInput" maxlength="128" autocomplete="off" class="input-block" />
+        <div class="modal-actions">
+          <button type="button" id="btnConfirmExit" class="btn btn-primary">Confirm</button>
+          <button type="button" id="btnCancelExit2" class="btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
