@@ -26,7 +26,7 @@ function buildChromeUserAgent() {
   } else {
     ua = `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${v} Safari/537.36`;
   }
-  return ua + ' FocusStudy-Electron';
+  return ua + ' DeepFocus-Electron';
 }
 
 function setupFocusBrowserSession() {

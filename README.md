@@ -5,7 +5,7 @@ Deep Focus is a dedicated productivity environment designed for deep work and co
 ## Core Features
 
 ### Deep Work Environment
-Focus Study provides a controlled space for your work. When used as a desktop application, it utilizes an embedded Chromium engine with session-level request filtering to enforce your focus rules across all web navigation.
+Deep Focus provides a controlled space for your work. When used as a desktop application, it utilizes an embedded Chromium engine with session-level request filtering to enforce your focus rules across all web navigation.
 
 ### Task Management and Selection
 Stay organized with a built-in task list. For moments of indecision, the interactive Task Wheel can randomly select your next objective, helping you overcome analysis paralysis and start working immediately.
@@ -20,7 +20,7 @@ Create an optimal acoustic environment with built-in ambient noise. Choose betwe
 Monitor your focus habits with local statistics. Track your total focus time, session averages, daily streaks, and session history to visualize your growth over time.
 
 ### Privacy and Portability
-Your data is yours. Focus Study is designed as a local-first application. All task lists, settings, and focus statistics are stored directly on your computer. There is no cloud synchronization or external data tracking.
+Your data is yours. Deep Focus is designed as a local-first application. All task lists, settings, and focus statistics are stored directly on your computer. There is no cloud synchronization or external data tracking.
 
 ## Usage Options
 
@@ -37,7 +37,7 @@ The desktop version offers the most robust focus features, including the full Ch
    ```
 
 ### Web Interface
-Focus Study can also run as a static site in any modern web browser.
+Deep Focus can also run as a static site in any modern web browser.
 
 1. Start a local server:
    ```bash

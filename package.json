@@ -1,5 +1,5 @@
 {
-  "name": "focus-study",
+  "name": "deep-focus",
   "version": "1.0.0",
   "description": "Distraction-blocking focus app — web or Chromium desktop (Electron)",
   "type": "module",
@@ -15,8 +15,8 @@
     "electron": "^33.2.0"
   },
   "build": {
-    "appId": "com.focusstudy.app",
-    "productName": "Focus Study",
+    "appId": "com.deepfocus.app",
+    "productName": "Deep Focus",
     "directories": {
       "output": "release"
     },

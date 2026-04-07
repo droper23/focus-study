@@ -1,10 +1,20 @@
 import { getDefaultBlocked, parseHostList, normalizeHostLine } from './security.js';
 
-const KEY = 'focus-study-v1';
+const OLD_KEY = 'focus-study-v1';
+const KEY = 'deep-focus-v1';
 
 function load() {
   try {
-    const raw = localStorage.getItem(KEY);
+    let raw = localStorage.getItem(KEY);
+    if (!raw) {
+      // Migrate from old key if exists
+      const oldRaw = localStorage.getItem(OLD_KEY);
+      if (oldRaw) {
+        localStorage.setItem(KEY, oldRaw);
+        // localStorage.removeItem(OLD_KEY); // Optional: keep it as backup for now?
+        raw = oldRaw;
+      }
+    }
     if (!raw) return null;
     return JSON.parse(raw);
   } catch {
@@ -162,7 +172,7 @@ export function updateStats(fn) {
 }
 
 export function hashPassword(plain) {
-  const salt = 'focus-study-salt-v1';
+  const salt = 'deep-focus-salt-v1';
   const enc = new TextEncoder();
   return crypto.subtle.digest('SHA-256', enc.encode(plain + salt)).then((buf) =>
     Array.from(new Uint8Array(buf))

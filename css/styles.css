@@ -428,7 +428,26 @@ body {
   border-radius: var(--radius-md);
   padding: 16px;
   background: rgba(255, 255, 255, 0.02);
-  min-height: 620px;
+  min-height: 580px;
+}
+
+.completed-tasks-section {
+  margin-top: 32px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 12px;
+}
+
+.completed-tasks-section .task-list span {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.completed-tasks-section .task-list button {
+  opacity: 0.6;
+}
+
+.completed-tasks-section .task-list button:hover {
+  opacity: 1;
 }
 
 .wheel-controls {

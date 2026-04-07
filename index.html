@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src 'self' data: https: blob:; frame-src 'self' https: http: about:; webview-src http: https: about: data:; connect-src 'self' https: http: wss: ws:; base-uri 'self'; form-action 'self';">
-  <title>Focus Study</title>
+  <title>Deep Focus</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -70,6 +70,10 @@
             <div class="wheel-pointer" aria-hidden="true"></div>
           </div>
           <div id="wheelResult" class="wheel-result mono muted">Spin to pick a task.</div>
+        </div>
+        <div id="completedTasksSection" class="completed-tasks-section hidden">
+          <h3 class="panel-title small muted">Recently Completed</h3>
+          <ul id="completedTaskList" class="task-list"></ul>
         </div>
       </section>
 
@@ -190,7 +194,7 @@
   <div id="focusGate" class="focus-gate">
     <div class="focus-gate-card">
       <p class="gate-kicker mono">Deep work</p>
-      <h1 class="gate-title">Focus Study</h1>
+      <h1 class="gate-title">Deep Focus</h1>
       <p class="gate-sub muted">A minimal space for concentration. Chromium engine in the desktop app.</p>
       <button type="button" id="btnEnterFocus" class="btn btn-primary btn-large">Enter focus mode</button>
       <p class="gate-hint small muted"><kbd>Enter</kbd> or <kbd>Space</kbd></p>

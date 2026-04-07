@@ -158,6 +158,8 @@ function init() {
   els.exitDelayRow = $('#exitDelayRow');
   els.exitPasswordRow = $('#exitPasswordRow');
   els.strictDomains = $('#strictDomains');
+  els.completedTasksSection = $('#completedTasksSection');
+  els.completedTaskList = $('#completedTaskList');
 
   els.useElectron =
     (typeof window.electronAPI !== 'undefined' && window.electronAPI.isElectron === true) || navigator.userAgent.includes('FocusStudy-Electron');
@@ -736,56 +738,83 @@ function updateTaskWheelButton(taskId) {
 
 function renderTasks() {
   state = getState();
-  const ul = $('#taskList');
-  ul.innerHTML = '';
-  [...state.tasks].reverse().forEach((task) => {
-    const li = document.createElement('li');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = task.done;
-    cb.addEventListener('change', () => {
-      state = getState();
-      const tasks = state.tasks.map((t) =>
-        t.id === task.id ? { ...t, done: cb.checked } : t
-      );
-      persist({ tasks });
-    });
-    const span = document.createElement('span');
-    span.textContent = task.text;
-    if (task.done) span.style.textDecoration = 'line-through';
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.dataset.taskId = task.id;
-    addBtn.addEventListener('click', () => {
-      const st = getState();
-      const removed = new Set(st.wheelRemovedIds || []);
-      if (removed.has(task.id)) {
-        removed.delete(task.id);
-      } else {
-        removed.add(task.id);
-      }
-      persist({ wheelRemovedIds: Array.from(removed) });
-      setWheelButtonState(addBtn, removed, task.id);
-      updateWheelItems();
-    });
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.textContent = 'Remove task';
-    del.addEventListener('click', () => {
-      state = getState();
-      persist({ tasks: state.tasks.filter((t) => t.id !== task.id) });
-      renderTasks();
-    });
+  const activeUl = $('#taskList');
+  const compUl = $('#completedTaskList');
+  if (!activeUl || !compUl) return;
+
+  activeUl.innerHTML = '';
+  compUl.innerHTML = '';
+
+  const activeTasks = state.tasks.filter((t) => !t.done);
+  const doneTasks = state.tasks.filter((t) => t.done);
+
+  if (els.completedTasksSection) {
+    els.completedTasksSection.classList.toggle('hidden', doneTasks.length === 0);
+  }
+
+  [...activeTasks].reverse().forEach((task) => {
+    const li = createTaskLi(task);
+    activeUl.appendChild(li);
+  });
+
+  [...doneTasks].reverse().forEach((task) => {
+    const li = createTaskLi(task);
+    compUl.appendChild(li);
+  });
+
+  updateWheelItems();
+}
+
+function createTaskLi(task) {
+  const li = document.createElement('li');
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = task.done;
+  cb.addEventListener('change', () => {
+    state = getState();
+    const tasks = state.tasks.map((t) =>
+      t.id === task.id ? { ...t, done: cb.checked } : t
+    );
+    persist({ tasks });
+    if (cb.checked) {
+      launchConfetti(true);
+    }
+    renderTasks();
+  });
+  const span = document.createElement('span');
+  span.textContent = task.text;
+  if (task.done) span.style.textDecoration = 'line-through';
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.dataset.taskId = task.id;
+  addBtn.addEventListener('click', () => {
     const st = getState();
     const removed = new Set(st.wheelRemovedIds || []);
+    if (removed.has(task.id)) {
+      removed.delete(task.id);
+    } else {
+      removed.add(task.id);
+    }
+    persist({ wheelRemovedIds: Array.from(removed) });
     setWheelButtonState(addBtn, removed, task.id);
-    const actions = document.createElement('div');
-    actions.className = 'task-actions';
-    actions.append(addBtn, del);
-    li.append(cb, span, actions);
-    ul.appendChild(li);
+    updateWheelItems();
   });
-  updateWheelItems();
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.textContent = 'Remove task';
+  del.addEventListener('click', () => {
+    state = getState();
+    persist({ tasks: state.tasks.filter((t) => t.id !== task.id) });
+    renderTasks();
+  });
+  const st = getState();
+  const removed = new Set(st.wheelRemovedIds || []);
+  setWheelButtonState(addBtn, removed, task.id);
+  const actions = document.createElement('div');
+  actions.className = 'task-actions';
+  actions.append(addBtn, del);
+  li.append(cb, span, actions);
+  return li;
 }
 
 function updateExitSettingsUi(mode) {
@@ -1243,15 +1272,15 @@ function drawWheel() {
   ctx.strokeStyle = 'rgba(0,0,0,0.25)';
   const colors = wheelState.colors.length ? wheelState.colors : ['#e2b714', '#6c8cff', '#46c37b', '#f58c7b', '#b16cff', '#f1c75b'];
   
-  const textRadius = radius * 0.92;
-  const maxWidth = radius * 0.65;
+  const textRadius = radius * 0.94;
+  const maxWidth = radius * 0.82;
   const scale = Math.max(0.6, Math.min(2.2, (getState().wheelTextScale || 140) / 100));
   const baseMax = Math.max(60, radius * 0.28) * scale;
-  const baseMin = 24 * scale;
+  const baseMin = 12 * scale;
   
   let globalFontSize = baseMax;
   for (let i = 0; i < items.length; i += 1) {
-    const text = items[i].text.slice(0, 32);
+    const text = items[i].text.slice(0, 48);
     if (!text) continue;
     const size = getFontSizeToFit(ctx, text, maxWidth, baseMax, baseMin);
     if (size < globalFontSize) globalFontSize = size;
@@ -1268,7 +1297,7 @@ function drawWheel() {
     ctx.fillStyle = colors[i % colors.length];
     ctx.fill();
     ctx.stroke();
-    const text = items[i].text.slice(0, 32);
+    const text = items[i].text.slice(0, 48);
     if (!text) continue;
     ctx.save();
     ctx.translate(w / 2, h / 2);
@@ -1421,37 +1450,72 @@ function buildWheelColors(items) {
   return out;
 }
 
-function launchConfetti() {
+function launchConfetti(isBurst = false) {
   const canvas = els.confettiCanvas;
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   const w = (canvas.width = window.innerWidth);
   const h = (canvas.height = window.innerHeight);
-  const pieces = Array.from({ length: 120 }).map(() => ({
-    x: Math.random() * w,
-    y: -20 - Math.random() * h,
-    r: 3 + Math.random() * 4,
-    vy: 2 + Math.random() * 3,
-    vx: -1 + Math.random() * 2,
-    color: ['#e2b714', '#6c8cff', '#46c37b', '#f58c7b', '#b16cff'][Math.floor(Math.random() * 5)]
-  }));
+  
+  let pieces = [];
+  if (isBurst) {
+    // Burst from sides
+    const colors = ['#e2b714', '#6c8cff', '#46c37b', '#f58c7b', '#b16cff'];
+    for (let i = 0; i < 60; i++) {
+       // Left side
+       pieces.push({
+         x: 0,
+         y: h * 0.8,
+         r: 4 + Math.random() * 4,
+         vy: -5 - Math.random() * 10,
+         vx: 5 + Math.random() * 10,
+         color: colors[Math.floor(Math.random() * colors.length)]
+       });
+       // Right side
+       pieces.push({
+         x: w,
+         y: h * 0.8,
+         r: 4 + Math.random() * 4,
+         vy: -5 - Math.random() * 10,
+         vx: -5 - Math.random() * 10,
+         color: colors[Math.floor(Math.random() * colors.length)]
+       });
+    }
+  } else {
+    pieces = Array.from({ length: 120 }).map(() => ({
+      x: Math.random() * w,
+      y: -20 - Math.random() * h,
+      r: 3 + Math.random() * 4,
+      vy: 2 + Math.random() * 3,
+      vx: -1 + Math.random() * 2,
+      color: ['#e2b714', '#6c8cff', '#46c37b', '#f58c7b', '#b16cff'][Math.floor(Math.random() * 5)]
+    }));
+  }
+
   const start = performance.now();
-  const dur = 1600;
+  const dur = isBurst ? 2500 : 1600;
+  const gravity = 0.35;
+
   const frame = (now) => {
-    const t = now - start;
+    const elapsed = now - start;
     ctx.clearRect(0, 0, w, h);
     pieces.forEach((p) => {
       p.x += p.vx;
       p.y += p.vy;
+      if (isBurst) {
+        p.vy += gravity;
+        p.vx *= 0.99;
+      }
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fill();
     });
-    if (t < dur || pieces.some((p) => p.y < h + 20)) {
+    if (elapsed < dur || pieces.some((p) => p.y < h + 20)) {
       requestAnimationFrame(frame);
+    } else {
+      ctx.clearRect(0, 0, w, h);
     }
-    else ctx.clearRect(0, 0, w, h);
   };
   requestAnimationFrame(frame);
 }
