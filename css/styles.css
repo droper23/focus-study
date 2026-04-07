@@ -672,7 +672,8 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1.2rem;
+  line-height: 1.1;
   font-size: clamp(6rem, 18vw, 12rem);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.06em;
@@ -685,7 +686,7 @@ body {
 .hero-actions {
   position: fixed;
   left: 50%;
-  top: calc(44% + 9rem);
+  top: calc(44% + 10.2rem);
   transform: translate(-50%, -50%);
   display: flex;
   gap: 10px;

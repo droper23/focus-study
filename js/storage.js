@@ -1,20 +1,10 @@
 import { getDefaultBlocked, parseHostList, normalizeHostLine } from './security.js';
 
-const OLD_KEY = 'focus-study-v1';
-const KEY = 'deep-focus-v1';
+const KEY = 'deep-focus-v2';
 
 function load() {
   try {
-    let raw = localStorage.getItem(KEY);
-    if (!raw) {
-      // Migrate from old key if exists
-      const oldRaw = localStorage.getItem(OLD_KEY);
-      if (oldRaw) {
-        localStorage.setItem(KEY, oldRaw);
-        // localStorage.removeItem(OLD_KEY); // Optional: keep it as backup for now?
-        raw = oldRaw;
-      }
-    }
+    const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch {
@@ -165,8 +155,12 @@ export function persist(partial) {
   const next = { ...cur, ...partial };
   save(next);
   try {
-    if (partial && (Object.prototype.hasOwnProperty.call(partial, 'stats') || Object.prototype.hasOwnProperty.call(partial, 'tasks'))) {
-      window.backendSyncState?.({ stats: next.stats, tasks: next.tasks });
+    if (partial && (
+      Object.prototype.hasOwnProperty.call(partial, 'stats') || 
+      Object.prototype.hasOwnProperty.call(partial, 'tasks') ||
+      Object.prototype.hasOwnProperty.call(partial, 'accentColor')
+    )) {
+      window.backendSyncState?.({ stats: next.stats, tasks: next.tasks, accentColor: next.accentColor });
     }
   } catch {
     /* ignore */

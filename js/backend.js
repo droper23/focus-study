@@ -61,14 +61,15 @@ function emptyStats() {
   return { totalFocusMs: 0, totalBlocked: 0, sessions: [] };
 }
 
-function hasData(stats, tasks) {
+function hasData(stats, tasks, payload) {
   const s = stats || {};
   const t = Array.isArray(tasks) ? tasks : [];
   return (
     t.length > 0 ||
     (s.totalFocusMs || 0) > 0 ||
     (s.totalBlocked || 0) > 0 ||
-    (Array.isArray(s.sessions) && s.sessions.length > 0)
+    (Array.isArray(s.sessions) && s.sessions.length > 0) ||
+    (payload && typeof payload.accentColor === 'string' && payload.accentColor.length > 0)
   );
 }
 
@@ -135,17 +136,19 @@ async function pullState(uid) {
   const data = snap.data() || {};
   const remote = {
     stats: data.stats || emptyStats(),
-    tasks: Array.isArray(data.tasks) ? data.tasks : []
+    tasks: Array.isArray(data.tasks) ? data.tasks : [],
+    accentColor: data.accentColor || null
   };
   lastRemote = remote;
   const local = getState();
   const localState = {
     stats: local?.stats || emptyStats(),
-    tasks: Array.isArray(local?.tasks) ? local.tasks : []
+    tasks: Array.isArray(local?.tasks) ? local.tasks : [],
+    accentColor: local?.accentColor || null
   };
 
-  const remoteHas = hasData(remote.stats, remote.tasks);
-  const localHas = hasData(localState.stats, localState.tasks);
+  const remoteHas = hasData(remote.stats, remote.tasks, remote);
+  const localHas = hasData(localState.stats, localState.tasks, localState);
   const differs = !sameData(remote, localState);
 
   if (remoteHas && localHas && differs) {
@@ -157,7 +160,8 @@ async function pullState(uid) {
     } else {
       const merged = {
         stats: mergeStats(localState.stats, remote.stats),
-        tasks: mergeTasks(localState.tasks, remote.tasks)
+        tasks: mergeTasks(localState.tasks, remote.tasks),
+        accentColor: remote.accentColor || localState.accentColor
       };
       persist(merged);
       await pushState(merged);
@@ -184,7 +188,13 @@ async function pushState(payload) {
   const tasks = payload?.tasks;
   await setDoc(
     ref,
-    { stats, tasks, email, updated_at: new Date().toISOString() },
+    { 
+      stats, 
+      tasks, 
+      accentColor: payload?.accentColor || '',
+      email, 
+      updated_at: new Date().toISOString() 
+    },
     { merge: true }
   );
 }
