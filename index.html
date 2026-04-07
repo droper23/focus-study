@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src 'self' data: https: blob:; frame-src 'self' https: http: about:; webview-src http: https: about: data:; connect-src 'self' https: http: wss: ws:; base-uri 'self'; form-action 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src 'self' data: https: blob:; frame-src 'self' https: http: about:; webview-src http: https: about: data:; connect-src 'self' https: http: wss: ws: https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; base-uri 'self'; form-action 'self';">
   <title>Deep Focus</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -19,6 +19,7 @@
         <button type="button" class="tab-btn" data-panel="settings" accesskey="s" title="Alt+S">Settings</button>
       </nav>
       <div class="topbar-right">
+        <span id="authBadge" class="small muted" style="margin-right: 12px;"></span>
         <button type="button" id="btnExitFocus" class="btn btn-danger">Exit focus</button>
       </div>
     </header>
@@ -28,6 +29,14 @@
         <span class="hero-sub">you have been focusing for</span>
         <span class="hero-label">FOCUS</span>
         <span id="heroTime">00:00</span>
+      </div>
+      <div id="heroActions" class="hero-actions">
+        <button type="button" id="btnHeroStart" class="btn btn-primary">Start</button>
+        <button type="button" id="btnHeroPause" class="btn">Pause</button>
+        <button type="button" id="btnHeroStop" class="btn btn-danger">Stop</button>
+      </div>
+      <div id="heroFinish" class="hero-finish hidden">
+        <div id="heroFinishText" class="mono">Session finished!</div>
       </div>
       <section id="panel-home" class="panel active" aria-labelledby="home-heading">
         <h2 id="home-heading" class="sr-only">Home</h2>
@@ -88,7 +97,18 @@
         </div>
       </div>
 
-      <canvas id="confettiCanvas" class="confetti"></canvas>
+  <canvas id="confettiCanvas" class="confetti"></canvas>
+  <div id="syncModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h3 class="modal-title">Sync account data</h3>
+      <p class="muted small">This account already has saved tasks and stats.</p>
+      <div class="modal-actions">
+        <button type="button" id="syncUseRemote" class="btn btn-primary">Use account data</button>
+        <button type="button" id="syncKeepLocal" class="btn">Keep current</button>
+        <button type="button" id="syncMerge" class="btn">Merge</button>
+      </div>
+    </div>
+  </div>
 
       <section id="panel-timer" class="panel" hidden>
         <h2 class="panel-title">Timer</h2>
@@ -186,6 +206,25 @@
             <input type="password" id="exitPassword" maxlength="128" placeholder="Set exit password" autocomplete="new-password" class="input-block" />
           </div>
         </fieldset>
+        <fieldset class="fieldset">
+          <legend>Session</legend>
+          <div class="field-row">
+            <label class="switch-row"><span>Auto-start session on open</span><span class="switch"><input type="checkbox" id="autoStartSession" /><span class="slider"></span></span></label>
+          </div>
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend>Account</legend>
+          <div class="field-row" id="authEmailRow">
+            <input type="email" id="authEmail" placeholder="Email" autocomplete="email" class="input-block" />
+            <input type="password" id="authPassword" placeholder="Password" autocomplete="current-password" class="input-block" />
+            <button type="button" id="authSignIn" class="btn btn-primary">Sign in / Create</button>
+            <button type="button" id="authReset" class="btn">Reset password</button>
+          </div>
+          <div class="field-row">
+            <button type="button" id="authLogout" class="btn">Sign out</button>
+            <span id="authStatus" class="small muted"></span>
+          </div>
+        </fieldset>
         <p class="small muted">Settings auto-save.</p>
       </section>
     </main>
@@ -220,6 +259,8 @@
     </div>
   </div>
 
+  <script src="js/firebase-config.js"></script>
+  <script type="module" src="js/backend.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

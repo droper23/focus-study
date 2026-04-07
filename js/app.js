@@ -21,6 +21,8 @@ let sessionStart = 0;
 let sessionBlocked = 0;
 let sessionFocusMs = 0;
 let focusTick = null;
+let focusPaused = false;
+let heroStarted = false;
 let visitStart = null;
 let currentHost = '';
 let pomodoro = {
@@ -108,6 +110,12 @@ function init() {
   els.browserHint = $('#browserHint');
   els.heroTimer = $('#heroTimer');
   els.heroTime = $('#heroTime');
+  els.heroActions = $('#heroActions');
+  els.btnHeroStart = $('#btnHeroStart');
+  els.btnHeroPause = $('#btnHeroPause');
+  els.btnHeroStop = $('#btnHeroStop');
+  els.heroFinish = $('#heroFinish');
+  els.heroFinishText = $('#heroFinishText');
   els.exitModal = $('#exitModal');
   els.exitDelayPanel = $('#exitDelayPanel');
   els.exitPasswordPanel = $('#exitPasswordPanel');
@@ -146,6 +154,7 @@ function init() {
   els.themeMode = $('#themeMode');
   els.reduceMotion = $('#reduceMotion');
   els.compactMode = $('#compactMode');
+  els.autoStartSession = $('#autoStartSession');
   els.statsSummaryLarge = $('#statsSummaryLarge');
   els.focusChart = $('#focusChart');
   els.sessionChart = $('#sessionChart');
@@ -197,6 +206,9 @@ function init() {
   document.addEventListener('keydown', onGateKey);
 
   $('#btnExitFocus').addEventListener('click', openExitModal);
+  if (els.btnHeroStart) els.btnHeroStart.addEventListener('click', startHeroSession);
+  if (els.btnHeroPause) els.btnHeroPause.addEventListener('click', pauseHeroSession);
+  if (els.btnHeroStop) els.btnHeroStop.addEventListener('click', stopHeroSession);
   $('#exitBackdrop').addEventListener('click', closeExitModal);
   $('#btnCancelExit').addEventListener('click', closeExitModal);
   $('#btnCancelExit2').addEventListener('click', closeExitModal);
@@ -343,6 +355,19 @@ function init() {
   showPanel('home');
 }
 
+window.onStateChanged = (next, partial) => {
+  if (!partial || !next) return;
+  if (Object.prototype.hasOwnProperty.call(partial, 'tasks')) {
+    renderTasks();
+    updateWheelItems();
+  }
+  if (Object.prototype.hasOwnProperty.call(partial, 'stats')) {
+    renderHistory();
+    updateStatsSummary();
+    updateSessionClock();
+  }
+};
+
 function hydrateUi() {
   state = getState();
   if (els.whitelistMode) els.whitelistMode.checked = state.whitelistMode;
@@ -356,6 +381,7 @@ function hydrateUi() {
   $('#setWork').value = state.pomodoro.work;
   $('#setShort').value = state.pomodoro.short;
   $('#setLong').value = state.pomodoro.long;
+  if (els.autoStartSession) els.autoStartSession.checked = state.autoStartSession !== false;
   if (els.setLongEvery) els.setLongEvery.value = state.pomodoro.longEvery || 4;
   pomodoro.remainingSec = state.pomodoro.work * 60;
   updatePomDisplay();
@@ -397,24 +423,143 @@ function onGateKey(e) {
 function enterFocus() {
   els.gate.classList.add('hidden');
   els.app.classList.remove('hidden');
-  sessionStart = Date.now();
-  sessionBlocked = 0;
-  sessionFocusMs = 0;
+  resetHeroSession();
+  focusPaused = false;
   visitStart = null;
   currentHost = '';
   updateGoalUi();
   updateSessionClock();
-
-  if (focusTick) clearInterval(focusTick);
-  focusTick = setInterval(() => {
-    sessionFocusMs += 1000;
-    updateSessionClock();
-  }, 1000);
+  const st = getState();
+  if (st.autoStartSession !== false) {
+    startHeroSession();
+  } else {
+    setHeroControls();
+  }
 
   document.documentElement.requestFullscreen?.().catch(() => {});
 
   if (els.urlInput) els.urlInput.focus();
   showPanel('home');
+}
+
+function startFocusTick() {
+  if (focusTick) clearInterval(focusTick);
+  focusTick = setInterval(() => {
+    sessionFocusMs += 1000;
+    updateSessionClock();
+  }, 1000);
+}
+
+function stopFocusTick() {
+  if (focusTick) {
+    clearInterval(focusTick);
+    focusTick = null;
+  }
+}
+
+function setHeroControls() {
+  if (!els.btnHeroStart || !els.btnHeroPause || !els.btnHeroStop) return;
+  if (!heroStarted) {
+    els.btnHeroStart.classList.remove('hidden');
+    els.btnHeroPause.classList.add('hidden');
+    els.btnHeroStop.classList.add('hidden');
+    els.btnHeroStart.style.display = 'inline-flex';
+    els.btnHeroPause.style.display = 'none';
+    els.btnHeroStop.style.display = 'none';
+    return;
+  }
+  if (focusTick) {
+    els.btnHeroStart.classList.add('hidden');
+    els.btnHeroPause.classList.remove('hidden');
+    els.btnHeroStop.classList.remove('hidden');
+    els.btnHeroStart.style.display = 'none';
+    els.btnHeroPause.style.display = 'inline-flex';
+    els.btnHeroStop.style.display = 'inline-flex';
+    return;
+  }
+  els.btnHeroStart.classList.remove('hidden');
+  els.btnHeroPause.classList.add('hidden');
+  els.btnHeroStop.classList.remove('hidden');
+  els.btnHeroStart.style.display = 'inline-flex';
+  els.btnHeroPause.style.display = 'none';
+  els.btnHeroStop.style.display = 'inline-flex';
+}
+
+function commitSession() {
+  if (sessionFocusMs <= 0 && sessionBlocked <= 0) {
+    sessionFocusMs = 0;
+    sessionBlocked = 0;
+    sessionStart = 0;
+    updateSessionClock();
+    return;
+  }
+  updateStats((s) => ({
+    ...s,
+    totalFocusMs: (s.totalFocusMs || 0) + sessionFocusMs,
+    sessions: [
+      ...(s.sessions || []),
+      {
+        end: Date.now(),
+        focusMs: sessionFocusMs,
+        blocked: sessionBlocked
+      }
+    ].slice(-100)
+  }));
+  sessionFocusMs = 0;
+  sessionBlocked = 0;
+  sessionStart = 0;
+  updateSessionClock();
+  renderHistory();
+  updateStatsSummary();
+}
+
+function startHeroSession() {
+  if (els.heroFinish) els.heroFinish.classList.add('hidden');
+  if (!heroStarted || !sessionStart) {
+    sessionStart = Date.now();
+  }
+  heroStarted = true;
+  focusPaused = false;
+  startFocusTick();
+  setHeroControls();
+}
+
+function pauseHeroSession() {
+  stopFocusTick();
+  focusPaused = true;
+  sessionStart = 0;
+  setHeroControls();
+}
+
+function stopHeroSession() {
+  stopFocusTick();
+  focusPaused = false;
+  heroStarted = false;
+  const finishedMs = sessionFocusMs;
+  commitSession();
+  showHeroFinished(finishedMs);
+  setHeroControls();
+}
+
+function resetHeroSession() {
+  sessionStart = 0;
+  sessionBlocked = 0;
+  sessionFocusMs = 0;
+  heroStarted = false;
+  if (els.heroFinish) els.heroFinish.classList.add('hidden');
+  updateSessionClock();
+  setHeroControls();
+}
+
+function showHeroFinished(ms) {
+  if (!els.heroFinish || !els.heroFinishText) return;
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  const label = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  els.heroFinishText.textContent = `Session finished! ${label}`;
+  els.heroFinish.classList.remove('hidden');
+  launchConfetti(true);
 }
 
 function updateSessionClock() {
@@ -670,26 +815,10 @@ async function confirmPasswordExit() {
 
 function finalizeExit() {
   closeExitModal();
-  if (focusTick) {
-    clearInterval(focusTick);
-    focusTick = null;
-  }
+  stopFocusTick();
   pomPause();
-
-  updateStats((s) => ({
-    ...s,
-    totalFocusMs: (s.totalFocusMs || 0) + sessionFocusMs,
-    sessions: [
-      ...(s.sessions || []),
-      {
-        end: Date.now(),
-        focusMs: sessionFocusMs,
-        blocked: sessionBlocked
-      }
-    ].slice(-100)
-  }));
-  renderHistory();
-  updateStatsSummary();
+  commitSession();
+  resetHeroSession();
 
   document.exitFullscreen?.().catch(() => {});
 
@@ -843,6 +972,7 @@ function saveSettingsUi() {
   const themeMode = els.themeMode?.value === 'light' ? 'light' : 'dark';
   const reduceMotion = !!els.reduceMotion?.checked;
   const compactMode = !!els.compactMode?.checked;
+  const autoStartSession = !!els.autoStartSession?.checked;
   const exitDelaySec = clamp(
     parseInt($('#exitDelay').value, 10),
     5,
@@ -871,7 +1001,8 @@ function saveSettingsUi() {
     uiScale,
     themeMode,
     reduceMotion,
-    compactMode
+    compactMode,
+    autoStartSession
   });
   updateExitSettingsUi(exitMode);
 

@@ -57,6 +57,7 @@ function defaultState() {
     themeMode: 'dark',
     reduceMotion: false,
     compactMode: false,
+    autoStartSession: true,
     pomodoro: { work: 25, short: 5, long: 15 },
     tasks: [],
     stats: {
@@ -116,6 +117,7 @@ function mergeDefaults(d) {
     themeMode: d.themeMode === 'light' ? 'light' : 'dark',
     reduceMotion: !!d.reduceMotion,
     compactMode: !!d.compactMode,
+    autoStartSession: d.autoStartSession !== false,
     pomodoro: {
       work: clampNum(d.pomodoro?.work, 1, 120, 25),
       short: clampNum(d.pomodoro?.short, 1, 60, 5),
@@ -162,13 +164,25 @@ export function persist(partial) {
   const cur = getState();
   const next = { ...cur, ...partial };
   save(next);
+  try {
+    if (partial && (Object.prototype.hasOwnProperty.call(partial, 'stats') || Object.prototype.hasOwnProperty.call(partial, 'tasks'))) {
+      window.backendSyncState?.({ stats: next.stats, tasks: next.tasks });
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    window.onStateChanged?.(next, partial);
+  } catch {
+    /* ignore */
+  }
   return next;
 }
 
 export function updateStats(fn) {
   const cur = getState();
   const stats = fn(cur.stats);
-  persist({ stats });
+  return persist({ stats });
 }
 
 export function hashPassword(plain) {
