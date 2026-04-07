@@ -38,6 +38,15 @@ function defaultState() {
     exitMode: 'delay',
     exitDelaySec: 30,
     passwordHash: '',
+    goalMinutes: 50,
+    ambientEnabled: false,
+    ambientVolume: 30,
+    ambientType: 'white',
+    accentColor: '#e2b714',
+    uiScale: 100,
+    themeMode: 'dark',
+    reduceMotion: false,
+    compactMode: false,
     pomodoro: { work: 25, short: 5, long: 15 },
     tasks: [],
     stats: {
@@ -48,8 +57,27 @@ function defaultState() {
     smart: {
       visits: [],
       switchLog: []
-    }
+    },
+    wheelRemovedIds: [],
+    wheelTextScale: 140,
+    urlHistory: [],
+    searchUrlTemplate: 'https://duckduckgo.com/?q=%s'
   };
+}
+
+function sanitizeSearchTemplate(s) {
+  const def = 'https://duckduckgo.com/?q=%s';
+  if (typeof s !== 'string') return def;
+  const t = s.trim().slice(0, 500);
+  if (!t.includes('%s') || !/^https:\/\//i.test(t)) return def;
+  try {
+    const sample = t.replace('%s', 'q');
+    const u = new URL(sample);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return def;
+    return t;
+  } catch {
+    return def;
+  }
 }
 
 function normHosts(arr) {
@@ -69,10 +97,20 @@ function mergeDefaults(d) {
     exitMode: d.exitMode === 'password' ? 'password' : 'delay',
     exitDelaySec: clampNum(d.exitDelaySec, 5, 600, 30),
     passwordHash: typeof d.passwordHash === 'string' ? d.passwordHash : '',
+    goalMinutes: clampNum(d.goalMinutes, 5, 240, def.goalMinutes),
+    ambientEnabled: !!d.ambientEnabled,
+    ambientVolume: clampNum(d.ambientVolume, 0, 100, def.ambientVolume),
+    ambientType: typeof d.ambientType === 'string' ? d.ambientType : def.ambientType,
+    accentColor: typeof d.accentColor === 'string' && d.accentColor.startsWith('#') ? d.accentColor.slice(0, 9) : def.accentColor,
+    uiScale: clampNum(d.uiScale, 85, 140, def.uiScale),
+    themeMode: d.themeMode === 'light' ? 'light' : 'dark',
+    reduceMotion: !!d.reduceMotion,
+    compactMode: !!d.compactMode,
     pomodoro: {
       work: clampNum(d.pomodoro?.work, 1, 120, 25),
       short: clampNum(d.pomodoro?.short, 1, 60, 5),
-      long: clampNum(d.pomodoro?.long, 1, 60, 15)
+      long: clampNum(d.pomodoro?.long, 1, 60, 15),
+      longEvery: clampNum(d.pomodoro?.longEvery, 2, 8, 4)
     },
     tasks: Array.isArray(d.tasks) ? sanitizeTasks(d.tasks) : [],
     stats: {
@@ -83,7 +121,13 @@ function mergeDefaults(d) {
     smart: {
       visits: Array.isArray(d.smart?.visits) ? d.smart.visits.slice(-200) : [],
       switchLog: Array.isArray(d.smart?.switchLog) ? d.smart.switchLog.slice(-500) : []
-    }
+    },
+    wheelRemovedIds: Array.isArray(d.wheelRemovedIds) ? d.wheelRemovedIds.slice(0, 500) : [],
+    wheelTextScale: clampNum(d.wheelTextScale, 60, 220, 140),
+    urlHistory: Array.isArray(d.urlHistory)
+      ? d.urlHistory.filter((x) => typeof x === 'string' && x.startsWith('http')).slice(0, 120)
+      : [],
+    searchUrlTemplate: sanitizeSearchTemplate(d.searchUrlTemplate)
   };
 }
 
@@ -145,6 +189,14 @@ export async function verifyPassword(plain) {
 export function parseStrictDomains(text) {
   const lines = parseHostList(text || '', 10);
   return lines.slice(0, 3);
+}
+
+export function addUrlToHistory(url) {
+  if (typeof url !== 'string' || !url.startsWith('http')) return;
+  const cur = getState();
+  const rest = (cur.urlHistory || []).filter((x) => x !== url);
+  rest.unshift(url);
+  persist({ urlHistory: rest.slice(0, 120) });
 }
 
 export { parseHostList, normalizeHostLine };

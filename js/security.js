@@ -52,6 +52,74 @@ export function parseHostList(text, maxLines = 500) {
   return out;
 }
 
+/**
+ * Host used for policy checks (whitelist / strict) for the configured search engine.
+ */
+export function searchProviderHostFromTemplate(template) {
+  const t = typeof template === 'string' && template.includes('%s') ? template : 'https://duckduckgo.com/?q=%s';
+  try {
+    const u = new URL(t.replace('%s', 'query'));
+    return normalizeHostLine(u.hostname) || 'duckduckgo.com';
+  } catch {
+    return 'duckduckgo.com';
+  }
+}
+
+function buildSearchNavigation(raw, searchUrlTemplate) {
+  const tpl =
+    typeof searchUrlTemplate === 'string' && searchUrlTemplate.includes('%s')
+      ? searchUrlTemplate.trim().slice(0, 500)
+      : 'https://duckduckgo.com/?q=%s';
+  const url = tpl.replace('%s', encodeURIComponent(raw.trim()));
+  let hostname = '';
+  try {
+    hostname = normalizeHostLine(new URL(url).hostname);
+  } catch {
+    return { ok: false, error: 'Invalid search template' };
+  }
+  if (!hostname) {
+    return { ok: false, error: 'Invalid search template' };
+  }
+  return { ok: true, url, hostname, isSearch: true };
+}
+
+/**
+ * Chrome-like omnibox: multi-word or non-URL input → search; bare hostnames need a dot to navigate.
+ */
+export function resolveOmniboxInput(raw, options = {}) {
+  const searchTpl = options.searchUrlTemplate;
+  if (typeof raw !== 'string') {
+    return { ok: false, error: 'Invalid input' };
+  }
+  const t = raw.trim().slice(0, 2048);
+  if (!t) {
+    return { ok: false, error: 'Empty input' };
+  }
+
+  if (/\s/.test(t)) {
+    return buildSearchNavigation(t, searchTpl);
+  }
+
+  const parsed = parseUserUrl(t);
+  if (parsed.ok) {
+    const h = parsed.hostname;
+    if (h.includes('.')) {
+      return { ...parsed, isSearch: false };
+    }
+    return buildSearchNavigation(t, searchTpl);
+  }
+
+  if (parsed.error && isSecurityUrlRejection(parsed.error)) {
+    return { ok: false, error: parsed.error };
+  }
+
+  return buildSearchNavigation(t, searchTpl);
+}
+
+function isSecurityUrlRejection(msg) {
+  return /scheme|credential|localhost|IP literal|Only http/i.test(String(msg));
+}
+
 export function parseUserUrl(raw) {
   if (typeof raw !== 'string') {
     return { ok: false, error: 'Invalid input' };
@@ -137,8 +205,21 @@ export function checkNavigation(hostname, ctx) {
     allowed,
     whitelistMode,
     strictMode,
-    strictDomains
+    strictDomains,
+    searchProvider
   } = ctx;
+
+  const sp =
+    typeof searchProvider === 'string' && searchProvider.length > 0
+      ? searchProvider.toLowerCase()
+      : '';
+
+  if (sp && hostMatchesEntry(hostname, sp)) {
+    if (isHostBlocked(hostname, blocked)) {
+      return { allowed: false, reason: 'Site is blocked' };
+    }
+    return { allowed: true, reason: '' };
+  }
 
   if (strictMode && strictDomains.length > 0) {
     let ok = false;
