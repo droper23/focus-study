@@ -316,7 +316,6 @@ async function initAuthUi() {
       return;
     }
     lastRemote = null;
-    resetLocalState();
   });
 }
 
