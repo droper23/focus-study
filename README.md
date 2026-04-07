@@ -1,6 +1,6 @@
-# Focus Study
+# Deep Focus
 
-Focus Study is a dedicated productivity environment designed for deep work and concentration. It combines essential focus tools into a single, minimal interface to help you stay on task and track your progress without the distractions of the open web.
+Deep Focus is a dedicated productivity environment designed for deep work and concentration. It combines essential focus tools into a single, minimal interface to help you stay on task and track your progress without the distractions of the open web.
 
 ## Core Features
 
