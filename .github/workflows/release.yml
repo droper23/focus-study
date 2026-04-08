@@ -37,7 +37,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: deep-focus-${{ matrix.os }}
-          path: release/**
+          path: |
+            release/*.dmg
+            release/*.exe
+            release/*.zip
+            release/*.blockmap
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -51,4 +55,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**
+          files: |
+            artifacts/**/**/*.dmg
+            artifacts/**/**/*.exe
+            artifacts/**/**/*.zip
+            artifacts/**/**/*.blockmap
